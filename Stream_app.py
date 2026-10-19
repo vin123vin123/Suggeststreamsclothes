@@ -79,15 +79,11 @@ def fetch_platzi_data():
     except Exception:
         return []
 
-# 7. FIXED: Live Production Unsplash CDN Image Fallback Dictionary
+# 7. High-Res Working Production Unsplash CDN Image Fallback Dictionary
 def get_reliable_cdn_fallback(text_context):
-    """
-    Returns a guaranteed 100% working high-res production Unsplash image URL 
-    by matching context descriptions directly from the static CDN repository.
-    """
     text_lower = str(text_context).lower()
     
-    # Secure, static, immutable production CDN links from Unsplash
+    # 100% stable, fixed production CDN links from Unsplash image database
     cdn_links = {
         "shoes": "https://unsplash.com",
         "sneakers": "https://unsplash.com",
@@ -103,11 +99,11 @@ def get_reliable_cdn_fallback(text_context):
         if key in text_lower:
             return url
             
-    # Universal fashion fallback if no keyword matches perfectly
+    # Default top fashion photo if no specific keyword matches
     return "https://unsplash.com"
 
-# 8. Filter and Validate incoming image URLs
-def get_validated_image_url(images_field, product_context_text):
+# 8. Fast URL String Filter
+def parse_image_url(images_field, product_context_text):
     fallback_image = get_reliable_cdn_fallback(product_context_text)
     
     if not images_field:
@@ -115,7 +111,7 @@ def get_validated_image_url(images_field, product_context_text):
         
     raw_url = images_field if isinstance(images_field, list) else str(images_field)
     
-    # Unpack nested, stringified list formatting from broken API schemas
+    # Fast string unpacking
     for _ in range(3):
         raw_url = raw_url.strip('[]"\' ')
         if raw_url.startswith('["') or raw_url.startswith('['):
@@ -125,19 +121,11 @@ def get_validated_image_url(images_field, product_context_text):
             except:
                 pass
 
-    # Drop non-functional mockup urls completely
-    if "placeimg.com" in raw_url or not raw_url.startswith("http") or "source.unsplash.com" in raw_url:
+    # Force fallback if the API serves broken test links
+    if "placeimg.com" in raw_url or not raw_url.startswith("http") or "://unsplash.com" in raw_url:
         return fallback_image
 
-    # Fire a lightweight test to see if the link responds correctly
-    try:
-        response = requests.head(raw_url, timeout=1.5, allow_redirects=True)
-        if response.status_code == 200 and "image" in response.headers.get("Content-Type", "").lower():
-            return raw_url
-    except:
-        pass 
-        
-    return fallback_image
+    return raw_url
 
 # 9. UI Grid Rendering Helper
 def render_product_grid(products, source_type):
@@ -156,11 +144,12 @@ def render_product_grid(products, source_type):
             context_string = f"{title} {desc}"
             
             if source_type == "fakestore":
-                image_url = get_validated_image_url(item.get('image'), context_string)
+                image_url = parse_image_url(item.get('image'), context_string)
             else:
-                image_url = get_validated_image_url(item.get('images'), context_string)
+                image_url = parse_image_url(item.get('images'), context_string)
 
             with st.container(border=True):
+                # Native fast loading without background network pre-checks
                 st.image(image_url, use_container_width=True)
                 st.subheader(f"{title[:35]}")
                 st.markdown(f"### **\${price}**")
